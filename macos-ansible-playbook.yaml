@@ -1,0 +1,128 @@
+---
+- hosts: localhost
+  vars:
+    homebrew_installed_packages:
+      - ansible
+      - aspell
+      - awscli
+      - coreutils
+      - curl
+      - dockutil
+      - git
+      - jq
+      - mr
+      - nvm
+      # - plantuml
+      - postgresql
+      - shellcheck
+      - wrk
+      - yamllint
+      - yarn
+      - zsh
+    homebrew_cask_apps:
+      - docker
+      - dropbox
+      - emacs
+      - firefox
+      - google-backup-and-sync
+      - google-chrome
+      - keepassx
+      - omnigraffle
+      - postman
+      - slack
+      - spectacle
+      - homebrew/cask-fonts/font-hack
+    dockitems_to_remove:
+      - Launchpad
+      - Safari
+      - Contacts
+      - Notes
+      - Reminders
+      - Maps
+      - Photos
+      - Messages
+      - FaceTime
+      - iTunes
+      - iBooks
+      - App Store
+      - System Preferences
+    dockitems_to_persist:
+      - name: Mail
+        path: "/Applications/Mail.app"
+        pos: 1
+      - name: Calendar
+        path: "/Applications/Calendar.app"
+        pos: 2
+      - name: Google Chrome
+        path: "/Applications/Google Chrome.app"
+        pos: 3
+      - name: Firefox
+        path: "/Applications/Firefox.app"
+        pos: 4
+      - name: Emacs
+        path: /Applications/Emacs.app
+        pos: 5
+      - name: Terminal
+        path: /Applications/Utilities/Terminal.app
+        pos: 6
+      - name: Slack
+        path: /Applications/Slack.app
+        pos: 7
+      - name: KeePassX
+        path: /Applications/KeePassX.app
+        pos: 8
+  roles:
+    - geerlingguy.homebrew
+  tasks:
+    - name: Clone system-config repository into ~/Config
+      git:
+        repo: git@github.com:mxco86/system-config.git
+        version: master
+        dest: /Users/mryall/Config/system-config
+        accept_hostkey: yes
+      # ssh-agent doesn't allow key to pass through remote sudo commands.
+      become: no
+    - name: Clone emacs-config repository into ~/Config
+      git:
+        repo: git@github.com:mxco86/emacs-config.git
+        version: master
+        dest: /Users/mryall/Config/emacs-config
+        accept_hostkey: yes
+      # ssh-agent doesn't allow key to pass through remote sudo commands.
+      become: no
+    - name: Create symbolic link for .emacs
+      file:
+        src: /Users/mryall/Config/emacs-config/.emacs
+        dest: /Users/mryall/.emacs
+        state: link
+    - name: Create symbolic link for .emacs.d
+      file:
+        src: /Users/mryall/Config/emacs-config/.emacs.d
+        dest: /Users/mryall/.emacs.d
+        state: link
+    - name: Create symbolic link for .zshrc
+      file:
+        src: /Users/mryall/Config/system-config/zsh/.zshrc-antigen
+        dest: /Users/mryall/.zshrc
+        state: link
+    - name: Create symbolic link for .gitconfig
+      file:
+        src: /Users/mryall/Config/system-config/git/.gitconfig
+        dest: /Users/mryall/.gitconfig
+        state: link
+    - name: Remove all items from Dock
+      shell: /usr/local/bin/dockutil --remove '{{ item }}'
+      ignore_errors: true
+      with_items: "{{dockitems_to_remove}}"
+    - name: Check if items in dock exist
+      shell: /usr/local/bin/dockutil --find '{{ item.name }}' || /usr/local/bin/dockutil --add '{{ item.path }}'
+      with_items: "{{dockitems_to_persist}}"
+    - name: Fix dock item order
+      shell: /usr/local/bin/dockutil --move '{{ item.name }}' --position {{ item.pos }}
+      with_items: "{{dockitems_to_persist}}"
+    # Terminal config - font, closing behaviour
+    # Startup items config - Spectacle, Docker, Google Sync
+    # Keyboard input config
+    # Spaces config
+    # Security - KeePassX opening
+    # Apps - Sonos, Remarkable

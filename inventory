@@ -1,0 +1,6 @@
+[defaults]
+remote_user=<user>
+
+[localhost]
+127.0.0.1
+
