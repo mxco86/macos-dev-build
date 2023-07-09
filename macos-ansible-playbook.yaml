@@ -1,98 +1,24 @@
 ---
 - hosts: localhost
+  connection: local
   vars:
-    homebrew_installed_packages:
-      - ansible
-      - aspell
-      - awscli
-      - coreutils
-      - curl
-      - dockutil
-      - git
-      - jq
-      - mr
-      - nvm
-      # - plantuml
-      - postgresql
-      - shellcheck
-      - the_silver_searcher
-      - wrk
-      - yamllint
-      - zsh
-    homebrew_cask_apps:
-      - aws-vault
-      - 1password
-      - 1password-cli
-      - calibre
-      - docker
-      - dropbox
-      - drawio
-      - emacs
-      - firefox
-      - google-backup-and-sync
-      - google-chrome
-      - keepassx
-      - omnigraffle
-      - postman
-      - slack
-      - spectacle
-      - homebrew/cask-fonts/font-hack
-    dockitems_to_remove:
-      - Launchpad
-      - Safari
-      - Contacts
-      - Notes
-      - Reminders
-      - Maps
-      - Photos
-      - Messages
-      - FaceTime
-      - iTunes
-      - iBooks
-      - App Store
-      - System Preferences
     dockitems_to_persist:
-      - name: Mail
-        path: "/Applications/Mail.app"
-        pos: 1
       - name: Calendar
-        path: "/Applications/Calendar.app"
-        pos: 2
-      - name: Google Chrome
-        path: "/Applications/Google Chrome.app"
-        pos: 3
+        path: /Applications/Calendar.app
+        pos: 1
       - name: Firefox
-        path: "/Applications/Firefox.app"
-        pos: 4
+        path: "~/Applications/Homebrew Apps/Firefox.app"
+        pos: 2
       - name: Emacs
-        path: /Applications/Emacs.app
-        pos: 5
-      - name: Terminal
-        path: /Applications/Utilities/Terminal.app
-        pos: 6
-      - name: Slack
-        path: /Applications/Slack.app
-        pos: 7
-      - name: KeePassX
-        path: /Applications/KeePassX.app
-        pos: 8
-      - name: OmniGraffle
-        path: /Applications/OmniGraffle.app
-        pos: 9
-  roles:
-    - geerlingguy.homebrew
+        path: "/Applications/Nix Apps/Emacs.app"
+        pos: 3
+      - name: kitty
+        path: "~/Applications/Home Manager Apps/kitty.app"
+        pos: 4
   tasks:
-    - name: Clone system-config repository into ~/Config
-      git:
-        repo: git@github.com:mxco86/system-config.git
-        version: master
-        dest: /Users/mryall/Config/system-config
-        accept_hostkey: yes
-      # ssh-agent doesn't allow key to pass through remote sudo commands.
-      become: no
     - name: Clone emacs-config repository into ~/Config
       git:
-        repo: git@github.com:mxco86/emacs-config.git
+        repo: https://github.com/mxco86/emacs-config.git
         version: master
         dest: /Users/mryall/Config/emacs-config
         accept_hostkey: yes
@@ -108,29 +34,23 @@
         src: /Users/mryall/Config/emacs-config/.emacs.d
         dest: /Users/mryall/.emacs.d
         state: link
-    - name: Create symbolic link for .zshrc
-      file:
-        src: /Users/mryall/Config/system-config/zsh/.zshrc-antigen
-        dest: /Users/mryall/.zshrc
-        state: link
-    - name: Create symbolic link for .gitconfig
-      file:
-        src: /Users/mryall/Config/system-config/git/.gitconfig
-        dest: /Users/mryall/.gitconfig
-        state: link
     - name: Remove all items from Dock
-      shell: /usr/local/bin/dockutil --remove '{{ item }}'
-      ignore_errors: true
-      with_items: "{{dockitems_to_remove}}"
+      shell: dockutil --remove all --no-restart
     - name: Check if items in dock exist
-      shell: /usr/local/bin/dockutil --find '{{ item.name }}' || /usr/local/bin/dockutil --add '{{ item.path }}'
+      shell: dockutil --find '{{ item.name }}' || dockutil --add '{{ item.path }}' --no-restart
       with_items: "{{dockitems_to_persist}}"
     - name: Fix dock item order
-      shell: /usr/local/bin/dockutil --move '{{ item.name }}' --position {{ item.pos }}
+      shell: dockutil --move '{{ item.name }}' --position {{ item.pos }} --no-restart
       with_items: "{{dockitems_to_persist}}"
-    # Terminal config - font, closing behaviour, option as meta
-    # Startup items config - Spectacle, Docker, Google Sync
+    - name: Enable SSH 
+      shell: sudo launchctl load -w /System/Library/LaunchDaemons/ssh.plist
+    - name: Check if homebrew is installed
+      stat:
+        path: "/usr/local/bin/brew"
+      register: "homebrew_check"
+    - name: Install Homebrew
+      when: homebrew_check == false
+      shell: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"        
     # Keyboard input config
-    # Spaces config
-    # Security - KeePassX opening
-    # Apps - Sonos, Remarkable
+    # Startup items config - Spectacle
+    # Apps - Sonos, Sky Sports
